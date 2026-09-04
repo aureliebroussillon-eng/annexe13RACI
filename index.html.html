@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrice RACI - Facturation ESSMS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #0b0b0b;
+            line-height: 1.6;
+        }
+        @media (prefers-color-scheme: dark) {
+            body { background: #1a1a19; color: #f0efec; }
+            .container { background: #2c2c2a; }
+            .surface-1 { background: #383835; }
+            .surface-2 { background: #1a1a19; }
+            table { border-color: #383835; }
+            tr:nth-child(even) { background: #383835; }
+            input, select, .raci-editor { background: #1a1a19; color: #f0efec; border-color: #383835; }
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: white;
+        }
+        .header {
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e1e0d9;
+        }
+        h1 { font-size: 28px; font-weight: 500; margin-bottom: 8px; }
+        .usage-note {
+            background: #EAF3DE;
+            border: 0.5px solid #97C459;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 13px;
+            color: #3B6D11;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+        .legend {
+            background: #fcfcfb;
+            border: 0.5px solid #e1e0d9;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .legend-title { font-weight: 500; font-size: 13px; margin-bottom: 10px; }
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+        .legend-item { font-size: 12px; }
+        .legend-item strong { display: block; margin-bottom: 2px; }
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            border: 1px solid #c3c2b7;
+            background: white;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover { background: #fcfcfb; }
+        .tab-btn.active {
+            background: #2a78d6;
+            color: white;
+            border-color: #2a78d6;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        input[type="text"], select {
+            padding: 10px 12px;
+            font-size: 13px;
+            border: 1px solid #c3c2b7;
+            border-radius: 6px;
+            flex: 1;
+            min-width: 200px;
+        }
+        .surface-1 { background: #fcfcfb; }
+        .surface-2 { background: white; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 500;
+            background: #fcfcfb;
+            border-bottom: 1px solid #c3c2b7;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e1e0d9;
+        }
+        .raci-cell {
+            cursor: pointer;
+            padding: 8px;
+            background: white;
+            border: 1px solid #e1e0d9;
+            border-radius: 4px;
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            user-select: none;
+            transition: all 0.2s;
+        }
+        .raci-cell:hover {
+            background: #fcfcfb;
+            border-color: #2a78d6;
+        }
+        .raci-cell.has-value {
+            background: #e6f1fb;
+            color: #185fa5;
+            border-color: #185fa5;
+        }
+        .raci-cell.has-a {
+            background: #d9e1f2;
+        }
+        .raci-editor {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            border: 1px solid #c3c2b7;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 300px;
+        }
+        .raci-editor h3 { margin-bottom: 16px; font-size: 16px; }
+        .raci-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .raci-option {
+            padding: 10px;
+            border: 1px solid #c3c2b7;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 500;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .raci-option:hover { background: #fcfcfb; }
+        .raci-option.selected {
+            background: #2a78d6;
+            color: white;
+            border-color: #2a78d6;
+        }
+        .raci-editor-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        button {
+            padding: 10px 16px;
+            border: 1px solid #c3c2b7;
+            background: white;
+            cursor: pointer;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 13px;
+        }
+        button:hover { background: #fcfcfb; }
+        button.primary {
+            background: #2a78d6;
+            color: white;
+            border-color: #2a78d6;
+        }
+        .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 999; }
+        .alert-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .alert-attention {
+            background: #C0DD97;
+            color: #3B6D11;
+        }
+        .alert-none {
+            background: #EAF3DE;
+            color: #639922;
+        }
+        .card {
+            background: #fcfcfb;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e1e0d9;
+            margin-bottom: 12px;
+        }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .metric-card {
+            background: #fcfcfb;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e1e0d9;
+        }
+        .metric-label { font-size: 12px; color: #52514e; margin-bottom: 6px; }
+        .metric-value { font-size: 24px; font-weight: 500; margin-bottom: 8px; color: #639922; }
+        .metric-sub { font-size: 11px; color: #898781; }
+        .list-item { margin-bottom: 8px; font-size: 13px; }
+        .section-title { font-size: 14px; font-weight: 500; margin-bottom: 12px; margin-top: 0; }
+        .annotation-input { width: 100%; padding: 6px; font-size: 11px; border: 1px solid #c3c2b7; border-radius: 4px; }
+        .hide { display: none; }
+        .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e1e0d9; font-size: 12px; color: #52514e; }
+        
+        @media print {
+            .tabs, .controls, button, .usage-note, .footer { display: none !important; }
+            .container { padding: 20px; }
+            .header { margin-bottom: 16px; page-break-after: avoid; }
+            table { page-break-inside: avoid; font-size: 10px; }
+            th, td { padding: 8px; }
+            h2 { page-break-before: always; margin-top: 24px; page-break-after: avoid; }
+            .card { page-break-inside: avoid; }
+            .legend { page-break-inside: avoid; page-break-after: avoid; }
+            .metric-grid { page-break-inside: avoid; }
+            .section-title { page-break-after: avoid; }
+            body { margin: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Matrice RACI</h1>
+        </div>
+
+        <div class="usage-note">
+            La matrice peut être complétée au cours des entretiens puis ajustée à partir des pratiques observées.
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('matrice')">📊 Matrice RACI</button>
+            <button class="tab-btn" onclick="switchTab('synthese')">📋 Synthèse des points d'attention</button>
+            <button class="tab-btn" onclick="switchTab('dependances')">👤 Analyse par intervenant</button>
+        </div>
+
+        <!-- VUE MATRICE -->
+        <div id="matrice-view">
+            <div class="legend">
+                <div class="legend-title">Légende RACI</div>
+                <div class="legend-grid">
+                    <div class="legend-item"><strong>R</strong> Réalise : exécute l'opération</div>
+                    <div class="legend-item"><strong>A</strong> Assume : porte la responsabilité finale ou valide</div>
+                    <div class="legend-item"><strong>C</strong> Consulté : intervient avant la décision ou l'exécution</div>
+                    <div class="legend-item"><strong>I</strong> Informé : reçoit l'information</div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <input type="text" id="search" placeholder="Chercher une étape..." onkeyup="filterMatrice()">
+                <select id="intervenant" onchange="filterMatrice()">
+                    <option value="">Tous les intervenants</option>
+                    <option value="terrain">Équipes terrain</option>
+                    <option value="service">Responsable de service</option>
+                    <option value="admin">Service administratif</option>
+                    <option value="compta">Comptabilité</option>
+                    <option value="direction">Direction</option>
+                </select>
+                <button onclick="exportData()" style="background: #2a78d6; color: white; border: none;">💾 Exporter CSV</button>
+                <button onclick="printAnnex()" style="background: #2a78d6; color: white; border: none;">🖨️ Imprimer l'annexe</button>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table id="matrice-table">
+                    <thead>
+                        <tr>
+                            <th>Étape</th>
+                            <th style="text-align: center; min-width: 85px;">Équipes terrain</th>
+                            <th style="text-align: center; min-width: 85px;">Responsable de service</th>
+                            <th style="text-align: center; min-width: 85px;">Service administratif</th>
+                            <th style="text-align: center; min-width: 85px;">Comptabilité</th>
+                            <th style="text-align: center; min-width: 75px;">Direction</th>
+                            <th style="min-width: 140px;">Alerte organisationnelle</th>
+                            <th style="min-width: 160px;">Point à examiner</th>
+                            <th style="min-width: 150px;">Constat / observation</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrice-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- VUE SYNTHÈSE -->
+        <div id="synthese-view" class="hide">
+            <h2>Synthèse des points d'attention</h2>
+            <div class="metric-grid" id="metrics-container"></div>
+            <div id="synthese-details"></div>
+        </div>
+
+        <!-- VUE DÉPENDANCES -->
+        <div id="dependances-view" class="hide">
+            <h2>Analyse par intervenant</h2>
+            <div id="dependances-container"></div>
+        </div>
+
+        <div class="footer">
+            <p><strong>📝 Édition :</strong> Cliquez sur chaque cellule RACI pour saisir les codes (R, A, C, I). Vos données et notes sont sauvegardées automatiquement.</p>
+            <p><strong>💾 Export :</strong> Le bouton CSV télécharge la matrice renseignée. Le bouton d'impression crée un document complet avec les trois vues.</p>
+        </div>
+    </div>
+
+    <!-- Modal d'édition RACI -->
+    <div id="editor-overlay" class="overlay hide" onclick="closeEditor()"></div>
+    <div id="editor-modal" class="raci-editor hide">
+        <h3 id="editor-title">Saisir les codes RACI</h3>
+        <p style="font-size: 12px; color: #52514e; margin-bottom: 16px;">Cochez les codes qui s'appliquent</p>
+        <div class="raci-options">
+            <div class="raci-option" onclick="toggleRaci('R')">R<br><span style="font-size: 10px;">Réalise</span></div>
+            <div class="raci-option" onclick="toggleRaci('A')">A<br><span style="font-size: 10px;">Assume</span></div>
+            <div class="raci-option" onclick="toggleRaci('C')">C<br><span style="font-size: 10px;">Consulté</span></div>
+            <div class="raci-option" onclick="toggleRaci('I')">I<br><span style="font-size: 10px;">Informé</span></div>
+        </div>
+        <div class="raci-editor-buttons">
+            <button onclick="saveRaci();" class="primary">Valider</button>
+            <button onclick="closeEditor()">Annuler</button>
+            <button onclick="clearRaci();" style="background: #fcfcfb; color: #3B6D11; border-color: #97C459;">Effacer</button>
+        </div>
+    </div>
+
+    <script>
+        const data = [
+            { id: 1, etape: "1. Saisie des présences", terrain: "", service: "", admin: "", compta: "", direction: "", examiner: "Modalités et fréquence de saisie", note: "" },
+            { id: 2, etape: "2. Vérification des présences", terrain: "", service: "", admin: "", compta: "", direction: "", examiner: "Existence et formalisation du contrôle", note: "" },
+            { id: 3, etape: "3. Validation données de présence", terrain: "", service: "", admin: "", compta: "", direction: "", examiner: "Niveau et modalités de validation", note: "" },
+            { id: 4, etape: "4. Transmission des données", terrain: "", service: "", admin: "", compta: "", direction: "", examiner: "Support, fréquence et traçabilité de la transmission", note: "" },
+            { id: 5, etape: "5. Consolidation des informations", terrain: "", service: "", admin: "", compta: "", direction: "", examiner: "Formats utilisés et retraitements nécessaires", note: "" },
+            { id: 6, etape: "6. Préparation de la facturation", terrain: "", service: "", admin: "", compta: "", direction: "", examiner: "Existence d'un contrôle préalable", note: "" },
+            { id: 7, etape: "7. Contrôle des journées facturées", terrain: "", service: "", admin: "", compta: "", direction: "", examiner: "Modalités de rapprochement entre activité et facturation", note: "" },
+            { id: 8, etape: "8. Établissement de la facture", terrain: "", service: "", admin: "", compta: "", direction: "", examiner: "Répartition des tâches et dépendance éventuelle à un intervenant", note: "" },
+            { id: 9, etape: "9. Validation de la facture", terrain: "", service: "", admin: "", compta: "", direction: "", examiner: "Identification du valideur final", note: "" },
+            { id: 10, etape: "10. Transmission de la facture", terrain: "", service: "", admin: "", compta: "", direction: "", examiner: "Modalités de transmission et traçabilité", note: "" },
+            { id: 11, etape: "11. Corrections / rejets", terrain: "", service: "", admin: "", compta: "", direction: "", examiner: "Formalisation du traitement des corrections et rejets", note: "" },
+            { id: 12, etape: "12. Rapprochement activité / facturation", terrain: "", service: "", admin: "", compta: "", direction: "", examiner: "Fréquence et méthode de rapprochement", note: "" },
+            { id: 13, etape: "13. Suivi des écarts", terrain: "", service: "", admin: "", compta: "", direction: "", examiner: "Responsabilité du suivi et traitement des écarts", note: "" },
+            { id: 14, etape: "14. Archivage des justificatifs", terrain: "", service: "", admin: "", compta: "", direction: "", examiner: "Modalités d'archivage et disponibilité des pièces", note: "" }
+        ];
+
+        const intervenants = ["terrain", "service", "admin", "compta", "direction"];
+        const labels = ["Équipes terrain", "Responsable de service", "Service administratif", "Comptabilité", "Direction"];
+
+        let editingCell = null;
+        let editingValue = [];
+
+        function loadData() {
+            const saved = localStorage.getItem('raciData');
+            if (saved) {
+                const savedData = JSON.parse(saved);
+                savedData.forEach(item => {
+                    const original = data.find(d => d.id === item.id);
+                    if (original) Object.assign(original, item);
+                });
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('raciData', JSON.stringify(data));
+            updateSynthese();
+        }
+
+        function detectAlert(row) {
+            const hasR = intervenants.some(inter => row[inter]?.includes("R"));
+            const hasA = intervenants.some(inter => row[inter]?.includes("A"));
+            const countA = intervenants.filter(inter => row[inter]?.includes("A")).length;
+            const countIntervenants = intervenants.filter(inter => row[inter]?.trim() !== "").length;
+
+            const alerts = [];
+
+            if (!hasR) alerts.push("Aucun R identifié");
+            if (!hasA) alerts.push("Aucun A identifié");
+            if (countA > 1) alerts.push("Plusieurs A identifiés");
+            
+            intervenants.forEach(inter => {
+                if (row[inter]?.includes("R") && row[inter]?.includes("A")) {
+                    alerts.push("R et A chez " + labels[intervenants.indexOf(inter)]);
+                }
+            });
+
+            if (countIntervenants === 1 && (hasR || hasA)) {
+                const soloIntervenant = intervenants.find(inter => row[inter]?.trim() !== "");
+                alerts.push("Concentration chez " + labels[intervenants.indexOf(soloIntervenant)]);
+            }
+
+            if (alerts.length === 0) {
+                return "Aucun point particulier relevé dans la répartition des rôles";
+            }
+
+            return alerts.join(" • ");
+        }
+
+        function renderMatrice(filteredData) {
+            const tbody = document.getElementById('matrice-body');
+            tbody.innerHTML = '';
+            filteredData.forEach((row, idx) => {
+                const alert = detectAlert(row);
+                const isAnomaly = alert !== "Aucun point particulier relevé dans la répartition des rôles";
+                const alertClass = isAnomaly ? "alert-attention" : "alert-none";
+                const alertText = isAnomaly ? alert : "Répartition à confirmer";
+                
+                const tr = document.createElement('tr');
+                tr.style.background = idx % 2 ? 'white' : '#fcfcfb';
+                
+                let raciHtml = '';
+                intervenants.forEach(inter => {
+                    raciHtml += `<td style="text-align: center;"><div class="raci-cell ${row[inter] ? 'has-value' : ''} ${row[inter]?.includes('A') ? 'has-a' : ''}" onclick="editCell(${row.id}, '${inter}')">${row[inter] || '—'}</div></td>`;
+                });
+
+                tr.innerHTML = `
+                    <td><strong>${row.etape}</strong></td>
+                    ${raciHtml}
+                    <td><span class="alert-badge ${alertClass}">${alertText}</span></td>
+                    <td style="font-size: 11px; color: #52514e;">${row.examiner}</td>
+                    <td>
+                        <input type="text" class="annotation-input" placeholder="Observation..." value="${row.note}" onchange="updateNote(${row.id}, this.value)">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterMatrice() {
+            const search = document.getElementById('search').value.toLowerCase();
+            const intervenant = document.getElementById('intervenant').value;
+            const filtered = data.filter(row => {
+                const matchesSearch = row.etape.toLowerCase().includes(search) || row.examiner.toLowerCase().includes(search);
+                const matchesIntervenant = !intervenant || row[intervenant]?.trim() !== "";
+                return matchesSearch && matchesIntervenant;
+            });
+            renderMatrice(filtered);
+        }
+
+        function editCell(id, intervenant) {
+            const row = data.find(d => d.id === id);
+            editingCell = { id, intervenant };
+            editingValue = row[intervenant]?.split(',') || [];
+            
+            document.getElementById('editor-overlay').classList.remove('hide');
+            document.getElementById('editor-modal').classList.remove('hide');
+            document.getElementById('editor-title').textContent = `${row.etape} — ${labels[intervenants.indexOf(intervenant)]}`;
+            
+            document.querySelectorAll('.raci-option').forEach(opt => {
+                opt.classList.remove('selected');
+                if (editingValue.includes(opt.textContent[0])) {
+                    opt.classList.add('selected');
+                }
+            });
+        }
+
+        function toggleRaci(code) {
+            const idx = editingValue.indexOf(code);
+            if (idx > -1) {
+                editingValue.splice(idx, 1);
+            } else {
+                editingValue.push(code);
+            }
+            
+            document.querySelectorAll('.raci-option').forEach(opt => {
+                opt.classList.remove('selected');
+                if (editingValue.includes(opt.textContent[0])) {
+                    opt.classList.add('selected');
+                }
+            });
+        }
+
+        function saveRaci() {
+            const row = data.find(d => d.id === editingCell.id);
+            row[editingCell.intervenant] = editingValue.join(',');
+            saveData();
+            filterMatrice();
+            closeEditor();
+        }
+
+        function clearRaci() {
+            editingValue = [];
+            document.querySelectorAll('.raci-option').forEach(opt => opt.classList.remove('selected'));
+        }
+
+        function closeEditor() {
+            document.getElementById('editor-overlay').classList.add('hide');
+            document.getElementById('editor-modal').classList.add('hide');
+        }
+
+        function updateNote(id, value) {
+            const row = data.find(d => d.id === id);
+            row.note = value;
+            saveData();
+        }
+
+        function updateSynthese() {
+            if (document.getElementById('synthese-view').classList.contains('hide')) return;
+            renderSynthese();
+        }
+
+        function renderSynthese() {
+            const sansR = data.filter(row => !intervenants.some(inter => row[inter]?.includes("R")));
+            const sansA = data.filter(row => !intervenants.some(inter => row[inter]?.includes("A")));
+            const plusieursA = data.filter(row => intervenants.filter(inter => row[inter]?.includes("A")).length > 1);
+            const rEtA = data.filter(row => intervenants.some(inter => row[inter]?.includes("R") && row[inter]?.includes("A")));
+
+            let html = `
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Étapes sans R</div>
+                        <div class="metric-value">${sansR.length}</div>
+                        <div class="metric-sub">sur ${data.length} étapes</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Étapes sans A</div>
+                        <div class="metric-value">${sansA.length}</div>
+                        <div class="metric-sub">sur ${data.length} étapes</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Étapes avec plusieurs A</div>
+                        <div class="metric-value">${plusieursA.length}</div>
+                        <div class="metric-sub">responsabilité partagée</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Étapes avec R et A combinés</div>
+                        <div class="metric-value">${rEtA.length}</div>
+                        <div class="metric-sub">chez même personne</div>
+                    </div>
+                </div>
+            `;
+
+            if (sansR.length > 0) {
+                html += `<div class="card"><h3 class="section-title">Étapes sans R identifié (exécution non attribuée)</h3><ul style="margin: 0; padding-left: 20px;">`;
+                sansR.forEach(row => {
+                    html += `<li class="list-item">${row.etape}</li>`;
+                });
+                html += `</ul></div>`;
+            }
+
+            if (sansA.length > 0) {
+                html += `<div class="card"><h3 class="section-title">Étapes sans A identifié (validation non formalisée)</h3><ul style="margin: 0; padding-left: 20px;">`;
+                sansA.forEach(row => {
+                    html += `<li class="list-item">${row.etape}</li>`;
+                });
+                html += `</ul></div>`;
+            }
+
+            if (plusieursA.length > 0) {
+                html += `<div class="card"><h3 class="section-title">Étapes avec plusieurs valideurs (responsabilité partagée)</h3><ul style="margin: 0; padding-left: 20px;">`;
+                plusieursA.forEach(row => {
+                    html += `<li class="list-item">${row.etape}</li>`;
+                });
+                html += `</ul></div>`;
+            }
+
+            if (rEtA.length > 0) {
+                html += `<div class="card"><h3 class="section-title">Étapes où réalisation et validation sont portées par la même personne</h3><ul style="margin: 0; padding-left: 20px;">`;
+                rEtA.forEach(row => {
+                    html += `<li class="list-item">${row.etape}</li>`;
+                });
+                html += `</ul></div>`;
+            }
+
+            document.getElementById('synthese-details').innerHTML = html;
+        }
+
+        function renderDependances() {
+            let html = `<div class="card"><h3 class="section-title">Concentration des responsabilités par intervenant</h3>`;
+
+            labels.forEach((label, idx) => {
+                const intervenant = intervenants[idx];
+                const etapesR = data.filter(row => row[intervenant]?.includes("R")).map(r => r.etape);
+                const etapesA = data.filter(row => row[intervenant]?.includes("A")).map(r => r.etape);
+                const etapesRA = data.filter(row => row[intervenant]?.includes("R") && row[intervenant]?.includes("A")).map(r => r.etape);
+                const total = etapesR.length + etapesA.length;
+
+                if (total > 0) {
+                    html += `<div style="margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e1e0d9;">
+                        <div style="font-size: 13px; font-weight: 500; margin-bottom: 8px;">${label}</div>
+                        <div style="font-size: 12px; color: #52514e; margin-bottom: 8px;">
+                            <strong>${etapesR.length}</strong> étapes en réalisation (R) • 
+                            <strong>${etapesA.length}</strong> en validation (A) • 
+                            <strong>${etapesRA.length}</strong> cumulant R et A
+                        </div>`;
+                    html += `</div>`;
+                }
+            });
+
+            html += `</div>`;
+            document.getElementById('dependances-container').innerHTML = html;
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('[id$="-view"]').forEach(el => el.classList.add('hide'));
+            document.getElementById(tab + '-view').classList.remove('hide');
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (tab === 'synthese') renderSynthese();
+            if (tab === 'dependances') renderDependances();
+        }
+
+        function exportData() {
+            let csv = "Étape,Équipes terrain,Responsable de service,Service administratif,Comptabilité,Direction,Alerte organisationnelle,Point à examiner,Constat/observation\n";
+            data.forEach(row => {
+                const alert = detectAlert(row);
+                csv += `"${row.etape}","${row.terrain}","${row.service}","${row.admin}","${row.compta}","${row.direction}","${alert}","${row.examiner}","${row.note}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'matrice_raci_facturation.csv';
+            link.click();
+        }
+
+        function printAnnex() {
+            window.print();
+        }
+
+        loadData();
+        renderMatrice(data);
+    </script>
+</body>
+</html>
